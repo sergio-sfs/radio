@@ -12,37 +12,46 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <title>Radio</title>
 <style>
+html{--bg:#0f1115;--sf:#181c25;--bd:#2b3140;--cur:#1b2740;--tx:#eef0f4;--mu:#8d94a8;--ac:#2f6fed;--on:#fff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:#0f1115;color:#eef0f4;font:16px -apple-system,system-ui,sans-serif;padding-bottom:calc(120px + env(safe-area-inset-bottom))}
-header{position:sticky;top:0;background:#0f1115;padding:calc(10px + env(safe-area-inset-top)) 14px 8px;z-index:5;border-bottom:1px solid #222733}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px -apple-system,system-ui,sans-serif;padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 14px 8px;z-index:5;border-bottom:1px solid var(--bd)}
 h1{margin:0 0 8px;font-size:22px}
 .row{display:flex;gap:8px}
-input[type=search]{flex:1;padding:10px 12px;border-radius:10px;border:1px solid #2b3140;background:#181c25;color:#eef0f4;font-size:16px}
-select{padding:10px;border-radius:10px;border:1px solid #2b3140;background:#181c25;color:#eef0f4;font-size:15px}
+input[type=search]{flex:1;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);font-size:16px}
+select{padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);font-size:15px}
 .tabs{display:flex;gap:8px;margin-top:8px}
-.tab{flex:1;padding:9px;border-radius:10px;background:#181c25;border:1px solid #2b3140;color:#aab;text-align:center;font-weight:600}
-.tab.on{background:#2f6fed;border-color:#2f6fed;color:#fff}
+.tab{flex:1;padding:9px;border-radius:10px;background:var(--sf);border:1px solid var(--bd);color:var(--mu);text-align:center;font-weight:600}
+.tab.on{background:var(--ac);border-color:var(--ac);color:var(--on)}
 .chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px}
-.chip{flex:none;padding:6px 12px;border-radius:99px;background:#181c25;border:1px solid #2b3140;color:#c5c9d6;font-size:14px}
-.chip.on{background:#e8eefc;color:#0f1115;border-color:#e8eefc}
-.st{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #1a1e29}
-.st.cur{background:#1b2740}
-.logo{width:44px;height:44px;border-radius:10px;background:#222838 center/cover;flex:none;display:flex;align-items:center;justify-content:center;font-size:20px}
+.chip{flex:none;padding:6px 12px;border-radius:99px;background:var(--sf);border:1px solid var(--bd);color:var(--tx);font-size:14px}
+.chip.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+.st{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--bd)}
+.st.cur{background:var(--cur)}
+.logo{width:44px;height:44px;border-radius:10px;background:var(--bd) center/cover;flex:none;display:flex;align-items:center;justify-content:center;font-size:20px}
 .info{flex:1;min-width:0}
 .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sub{font-size:13px;color:#8d94a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:13px;color:var(--mu);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fav{font-size:24px;background:none;border:0;color:#556;padding:6px}
 .fav.on{color:#ffcc33}
-#msg{padding:30px 20px;text-align:center;color:#8d94a8}
-#bar{position:fixed;left:0;right:0;bottom:0;background:#181c25;border-top:1px solid #2b3140;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px}
+#msg{padding:30px 20px;text-align:center;color:var(--mu)}
+#bar{position:fixed;left:0;right:0;bottom:0;background:var(--sf);border-top:1px solid var(--bd);padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px}
 #bar .info{cursor:default}
-.ctl{width:46px;height:46px;border-radius:50%;border:0;background:#2f6fed;color:#fff;font-size:20px}
-.ctl.s{width:38px;height:38px;background:#2b3140;font-size:16px}
+.ctl{width:46px;height:46px;border-radius:50%;border:0;background:var(--ac);color:var(--on);font-size:20px}
+.ctl.s{width:38px;height:38px;background:var(--bd);color:var(--tx);font-size:16px}
+
+.hd{display:flex;align-items:center;justify-content:space-between}
+#th{font-size:22px;background:none;border:0;padding:4px 8px}
+#sw{display:none;gap:10px;margin:0 0 10px;overflow-x:auto;padding:2px}
+#sw.show{display:flex}
+.sw{flex:none;width:38px;height:38px;border-radius:50%;border:3px solid var(--bd)}
+.sw.on{border-color:var(--ac)}
 </style>
 </head>
 <body>
 <header>
-  <h1>📻 Radio</h1>
+  <div class="hd"><h1>📻 Radio</h1><button id="th">🎨</button></div>
+  <div id="sw"></div>
   <div class="row">
     <input type="search" id="q" placeholder="Cerca stazione…">
     <select id="cc"><option value="IT">🇮🇹 Italia</option><option value="">🌍 Mondo</option><option value="CH">🇨🇭 Svizzera</option><option value="GB">🇬🇧 UK</option><option value="US">🇺🇸 USA</option></select>
@@ -64,6 +73,26 @@ const $=s=>document.querySelector(s);
 const SERVERS=['https://de1.api.radio-browser.info','https://nl1.api.radio-browser.info','https://at1.api.radio-browser.info'];
 const GENRES=[['','Tutti'],['pop','Pop'],['rock','Rock'],['news','Notizie'],['talk','Talk'],['jazz','Jazz'],['classical','Classica'],['dance','Dance'],['hits','Hits'],['oldies','Oldies'],['lounge','Lounge'],['hip hop','Hip hop']];
 const ls={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+const THEMES={
+ scuro:{n:'Scuro',bg:'#0f1115',sf:'#181c25',bd:'#2b3140',cur:'#1b2740',tx:'#eef0f4',mu:'#8d94a8',ac:'#2f6fed',on:'#fff'},
+ nero:{n:'Nero',bg:'#000000',sf:'#101010',bd:'#262626',cur:'#1a1a1a',tx:'#f2f2f2',mu:'#8a8a8a',ac:'#e5484d',on:'#fff'},
+ chiaro:{n:'Chiaro',bg:'#f5f6f8',sf:'#ffffff',bd:'#d9dce3',cur:'#e3ecff',tx:'#15181f',mu:'#6a7183',ac:'#2f6fed',on:'#fff'},
+ blu:{n:'Blu notte',bg:'#0a1628',sf:'#12233d',bd:'#223a5e',cur:'#1a3a66',tx:'#e8f0ff',mu:'#8fa6c8',ac:'#3aa0ff',on:'#fff'},
+ verde:{n:'Verde',bg:'#0c1a14',sf:'#13271d',bd:'#25402f',cur:'#1b3b2a',tx:'#e9f7ee',mu:'#8fb09c',ac:'#2fbf71',on:'#04140b'},
+ viola:{n:'Viola',bg:'#150f24',sf:'#201736',bd:'#352a55',cur:'#2c2150',tx:'#f0eaff',mu:'#a99cc9',ac:'#9a6bff',on:'#fff'},
+ caldo:{n:'Caldo',bg:'#1c1410',sf:'#2a1e17',bd:'#43322a',cur:'#4a3326',tx:'#fbeee3',mu:'#b99c88',ac:'#f08a24',on:'#1c1410'}
+};
+function applyTheme(k){
+  const t=THEMES[k]||THEMES.scuro, r=document.documentElement.style;
+  for(const x of ['bg','sf','bd','cur','tx','mu','ac','on'])r.setProperty('--'+x,t[x]);
+  document.querySelector('meta[name=theme-color]').content=t.bg;
+  ls.set('theme',k); drawSw(k);
+}
+function drawSw(k){$('#sw').innerHTML=Object.entries(THEMES).map(([i,t])=>`<div class="sw${i===k?' on':''}" data-k="${i}" title="${t.n}" style="background:linear-gradient(135deg,${t.bg} 50%,${t.ac} 50%)"></div>`).join('')}
+$('#th').onclick=()=>$('#sw').classList.toggle('show');
+$('#sw').onclick=e=>{const s=e.target.closest('.sw');if(s)applyTheme(s.dataset.k)};
+applyTheme(ls.get('theme','scuro'));
 let favs=ls.get('favs',[]), tab='all', tag='', list=[], cur=ls.get('last',null), timer;
 const audio=new Audio(); audio.preload='none';
 

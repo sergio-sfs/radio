@@ -111,6 +111,7 @@ $('#th').onclick=()=>$('#sw').classList.toggle('show');
 $('#sw').onclick=e=>{const s=e.target.closest('.sw');if(s)applyTheme(s.dataset.k)};
 applyTheme(ls.get('theme','scuro'));
 let favs=ls.get('favs',[]), tab='all', tag='', list=[], cur=ls.get('last',null), timer;
+const NP=''; let npTitle='', npT=null;
 let audio, ctx, gain=null, filt=[];
 let eqOn=ls.get('eq',false), vol=ls.get('vol',1), bands=ls.get('bands',[0,0,0]);
 function applyVol(){ if(gain){audio.volume=1;gain.gain.value=vol}else audio.volume=vol }
@@ -180,6 +181,7 @@ function pool(){return tab==='fav'?favs:list}
 function play(s){
   cur=s; ls.set('last',s);
   if(ctx&&ctx.state==='suspended')ctx.resume();
+  npTitle='';nowPlaying();
   audio.src=s.url; $('#bnm').textContent=s.name; $('#bsub').textContent='Connessione…';
   $('#blogo').style.backgroundImage=s.logo?`url('${s.logo}')`:''; $('#blogo').textContent=s.logo?'':'📻';
   audio.play().catch(()=>{$('#bsub').textContent='Stazione non raggiungibile'});
@@ -189,9 +191,23 @@ function play(s){
   render();
 }
 function step(d){const p=pool();if(!p.length)return;let i=p.findIndex(x=>cur&&x.id===cur.id);play(p[(i+d+p.length)%p.length])}
+function nowPlaying(){
+  clearInterval(npT); if(!NP||!cur)return;
+  const s=cur;
+  const go=async()=>{
+    try{
+      const d=await (await fetch(NP+'?url='+encodeURIComponent(s.url))).json();
+      if(cur!==s||!d.title||d.title===npTitle)return;
+      npTitle=d.title;
+      if(!audio.paused)$('#bsub').textContent='♪ '+npTitle;
+      if('mediaSession' in navigator)navigator.mediaSession.metadata=new MediaMetadata({title:npTitle,artist:s.name,artwork:s.logo?[{src:s.logo,sizes:'192x192'}]:[]});
+    }catch(e){}
+  };
+  go(); npT=setInterval(go,20000);
+}
 function bind(){
-audio.onplaying=()=>{$('#pp').textContent='⏸';$('#bsub').textContent='In onda';navigator.mediaSession&&(navigator.mediaSession.playbackState='playing')};
-audio.onpause=()=>{$('#pp').textContent='▶';if($('#bsub').textContent==='In onda')$('#bsub').textContent='In pausa';navigator.mediaSession&&(navigator.mediaSession.playbackState='paused')};
+audio.onplaying=()=>{$('#pp').textContent='⏸';$('#bsub').textContent=npTitle?'♪ '+npTitle:'In onda';navigator.mediaSession&&(navigator.mediaSession.playbackState='playing')};
+audio.onpause=()=>{$('#pp').textContent='▶';if($('#bsub').textContent==='In onda'||$('#bsub').textContent[0]==='♪')$('#bsub').textContent='In pausa';navigator.mediaSession&&(navigator.mediaSession.playbackState='paused')};
 audio.onwaiting=()=>{$('#bsub').textContent='Buffering…'};
 audio.onerror=()=>{
   if(eqOn&&cur){eqOn=false;ls.set('eq',false);$('#eq').checked=false;$('#eqmsg').textContent="Questa stazione non supporta l'equalizzatore: disattivato";mk();play(cur);return}

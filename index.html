@@ -58,7 +58,7 @@ select{padding:10px;border-radius:10px;border:1px solid var(--bd);background:var
 </head>
 <body>
 <header>
-  <div class="hd"><h1>📻 Radio</h1><span><button id="mxb" style="font-size:22px;background:none;border:0;padding:4px 8px">🎚</button><button id="th">🎨</button></span></div>
+  <div class="hd"><h1>📻 Radio <small id="ver" style="font-size:12px;font-weight:400;color:var(--mu)"></small></h1><span><button id="mxb" style="font-size:22px;background:none;border:0;padding:4px 8px">🎚</button><button id="th">🎨</button></span></div>
   <div id="sw"></div>
   <div id="mx">
     <label><span>Volume</span><input type="range" id="vol" min="0" max="1" step="0.01"></label>
@@ -111,6 +111,7 @@ $('#th').onclick=()=>$('#sw').classList.toggle('show');
 $('#sw').onclick=e=>{const s=e.target.closest('.sw');if(s)applyTheme(s.dataset.k)};
 applyTheme(ls.get('theme','scuro'));
 let favs=ls.get('favs',[]), tab='all', tag='', list=[], cur=ls.get('last',null), timer;
+const VER='v1.4 · 18/11/2026';
 const NP='https://noisy-voice-02cb.tbrb2rhtnv.workers.dev/'; let npTitle='', npT=null;
 let audio, ctx, gain=null, filt=[];
 let eqOn=ls.get('eq',false), vol=ls.get('vol',1), bands=ls.get('bands',[0,0,0]);
@@ -239,6 +240,7 @@ if(cur){$('#bnm').textContent=cur.name;$('#bsub').textContent='Tocca ▶';$('#bl
   };
   $('#rst').onclick=()=>{bands=[0,0,0];ls.set('bands',bands);document.querySelectorAll('.bd').forEach(r=>r.value=0);filt.forEach(f=>f.gain.value=0)};
 })();
+$('#ver').textContent=VER;
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 load();
 </script>

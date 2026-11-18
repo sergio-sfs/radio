@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Radio">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Radio</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#0f1115;color:#eef0f4;font:16px -apple-system,system-ui,sans-serif;padding-bottom:calc(120px + env(safe-area-inset-bottom))}
+header{position:sticky;top:0;background:#0f1115;padding:calc(10px + env(safe-area-inset-top)) 14px 8px;z-index:5;border-bottom:1px solid #222733}
+h1{margin:0 0 8px;font-size:22px}
+.row{display:flex;gap:8px}
+input[type=search]{flex:1;padding:10px 12px;border-radius:10px;border:1px solid #2b3140;background:#181c25;color:#eef0f4;font-size:16px}
+select{padding:10px;border-radius:10px;border:1px solid #2b3140;background:#181c25;color:#eef0f4;font-size:15px}
+.tabs{display:flex;gap:8px;margin-top:8px}
+.tab{flex:1;padding:9px;border-radius:10px;background:#181c25;border:1px solid #2b3140;color:#aab;text-align:center;font-weight:600}
+.tab.on{background:#2f6fed;border-color:#2f6fed;color:#fff}
+.chips{display:flex;gap:6px;overflow-x:auto;margin-top:8px;padding-bottom:2px}
+.chip{flex:none;padding:6px 12px;border-radius:99px;background:#181c25;border:1px solid #2b3140;color:#c5c9d6;font-size:14px}
+.chip.on{background:#e8eefc;color:#0f1115;border-color:#e8eefc}
+.st{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid #1a1e29}
+.st.cur{background:#1b2740}
+.logo{width:44px;height:44px;border-radius:10px;background:#222838 center/cover;flex:none;display:flex;align-items:center;justify-content:center;font-size:20px}
+.info{flex:1;min-width:0}
+.nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{font-size:13px;color:#8d94a8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fav{font-size:24px;background:none;border:0;color:#556;padding:6px}
+.fav.on{color:#ffcc33}
+#msg{padding:30px 20px;text-align:center;color:#8d94a8}
+#bar{position:fixed;left:0;right:0;bottom:0;background:#181c25;border-top:1px solid #2b3140;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:12px}
+#bar .info{cursor:default}
+.ctl{width:46px;height:46px;border-radius:50%;border:0;background:#2f6fed;color:#fff;font-size:20px}
+.ctl.s{width:38px;height:38px;background:#2b3140;font-size:16px}
+</style>
+</head>
+<body>
+<header>
+  <h1>📻 Radio</h1>
+  <div class="row">
+    <input type="search" id="q" placeholder="Cerca stazione…">
+    <select id="cc"><option value="IT">🇮🇹 Italia</option><option value="">🌍 Mondo</option><option value="CH">🇨🇭 Svizzera</option><option value="GB">🇬🇧 UK</option><option value="US">🇺🇸 USA</option></select>
+  </div>
+  <div class="tabs"><div class="tab on" id="t-all">Stazioni</div><div class="tab" id="t-fav">★ Preferiti</div></div>
+  <div class="chips" id="chips"></div>
+</header>
+<div id="list"></div>
+<div id="msg"></div>
+<div id="bar">
+  <div class="logo" id="blogo">📻</div>
+  <div class="info"><div class="nm" id="bnm">Scegli una stazione</div><div class="sub" id="bsub">&nbsp;</div></div>
+  <button class="ctl s" id="prev">⏮</button>
+  <button class="ctl" id="pp">▶</button>
+  <button class="ctl s" id="next">⏭</button>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+const SERVERS=['https://de1.api.radio-browser.info','https://nl1.api.radio-browser.info','https://at1.api.radio-browser.info'];
+const GENRES=[['','Tutti'],['pop','Pop'],['rock','Rock'],['news','Notizie'],['talk','Talk'],['jazz','Jazz'],['classical','Classica'],['dance','Dance'],['hits','Hits'],['oldies','Oldies'],['lounge','Lounge'],['hip hop','Hip hop']];
+const ls={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let favs=ls.get('favs',[]), tab='all', tag='', list=[], cur=ls.get('last',null), timer;
+const audio=new Audio(); audio.preload='none';
+
+function build(){ $('#chips').innerHTML=GENRES.map(([v,l])=>`<div class="chip${v===tag?' on':''}" data-t="${v}">${l}</div>`).join(''); }
+build();
+$('#chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;tag=c.dataset.t;build();tab='all';setTab();load()};
+function setTab(){$('#t-all').classList.toggle('on',tab==='all');$('#t-fav').classList.toggle('on',tab==='fav');render()}
+$('#t-all').onclick=()=>{tab='all';setTab()};
+$('#t-fav').onclick=()=>{tab='fav';setTab()};
+$('#q').oninput=()=>{clearTimeout(timer);timer=setTimeout(load,400)};
+$('#cc').onchange=load;
+
+async function api(path){
+  let err;
+  for(const s of SERVERS){ try{const r=await fetch(s+path);if(r.ok)return await r.json()}catch(e){err=e} }
+  throw err||new Error('api');
+}
+async function load(){
+  $('#msg').textContent='Carico…';
+  const p=new URLSearchParams({hidebroken:'true',order:'clickcount',reverse:'true',limit:'300',has_extended_info:'false'});
+  const cc=$('#cc').value, name=$('#q').value.trim();
+  if(cc)p.set('countrycode',cc); if(name)p.set('name',name); if(tag)p.set('tag',tag);
+  try{
+    const d=await api('/json/stations/search?'+p);
+    const seen=new Set();
+    list=d.filter(s=>(s.url_resolved||'').startsWith('https://')).filter(s=>{const k=s.name.trim().toLowerCase();if(seen.has(k))return false;seen.add(k);return true})
+      .map(s=>({id:s.stationuuid,name:s.name.trim(),url:s.url_resolved,logo:s.favicon&&s.favicon.startsWith('https')?s.favicon:'',tags:(s.tags||'').split(',').slice(0,3).join(', '),cc:s.countrycode}));
+    ls.set('cache',list.slice(0,100));
+  }catch(e){ list=ls.get('cache',[]); $('#msg').textContent=list.length?'Offline: elenco salvato':'Impossibile caricare le stazioni'; render(); return }
+  render();
+}
+function render(){
+  const src=tab==='fav'?favs:list;
+  $('#list').innerHTML=src.map(s=>`<div class="st${cur&&cur.id===s.id?' cur':''}" data-id="${s.id}">
+    <div class="logo" style="${s.logo?`background-image:url('${s.logo}')`:''}">${s.logo?'':'📻'}</div>
+    <div class="info"><div class="nm">${esc(s.name)}</div><div class="sub">${esc(s.tags||'')}</div></div>
+    <button class="fav${favs.some(f=>f.id===s.id)?' on':''}" data-f="${s.id}">★</button></div>`).join('');
+  $('#msg').textContent=src.length?'':(tab==='fav'?'Nessun preferito: tocca ★ su una stazione':($('#msg').textContent==='Carico…'?'Carico…':'Nessuna stazione trovata'));
+  if(src.length&&$('#msg').textContent!=='')$('#msg').textContent=$('#msg').textContent.startsWith('Offline')?$('#msg').textContent:'';
+}
+function esc(t){return t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('#list').onclick=e=>{
+  const f=e.target.closest('[data-f]');
+  if(f){const id=f.dataset.f;const s=[...list,...favs].find(x=>x.id===id);
+    favs=favs.some(x=>x.id===id)?favs.filter(x=>x.id!==id):[...favs,s];ls.set('favs',favs);render();return}
+  const r=e.target.closest('.st'); if(!r)return;
+  const s=[...list,...favs].find(x=>x.id===r.dataset.id); if(s)play(s);
+};
+function pool(){return tab==='fav'?favs:list}
+function play(s){
+  cur=s; ls.set('last',s);
+  audio.src=s.url; $('#bnm').textContent=s.name; $('#bsub').textContent='Connessione…';
+  $('#blogo').style.backgroundImage=s.logo?`url('${s.logo}')`:''; $('#blogo').textContent=s.logo?'':'📻';
+  audio.play().catch(()=>{$('#bsub').textContent='Stazione non raggiungibile'});
+  if('mediaSession' in navigator){
+    navigator.mediaSession.metadata=new MediaMetadata({title:s.name,artist:'Radio',artwork:s.logo?[{src:s.logo,sizes:'192x192'}]:[]});
+  }
+  render();
+}
+function step(d){const p=pool();if(!p.length)return;let i=p.findIndex(x=>cur&&x.id===cur.id);play(p[(i+d+p.length)%p.length])}
+audio.onplaying=()=>{$('#pp').textContent='⏸';$('#bsub').textContent='In onda';navigator.mediaSession&&(navigator.mediaSession.playbackState='playing')};
+audio.onpause=()=>{$('#pp').textContent='▶';if($('#bsub').textContent==='In onda')$('#bsub').textContent='In pausa';navigator.mediaSession&&(navigator.mediaSession.playbackState='paused')};
+audio.onwaiting=()=>{$('#bsub').textContent='Buffering…'};
+audio.onerror=()=>{$('#pp').textContent='▶';$('#bsub').textContent='Stazione non raggiungibile'};
+$('#pp').onclick=()=>{
+  if(!cur){const p=pool();if(p.length)play(p[0]);return}
+  if(audio.paused){ if(!audio.src||audio.error)play(cur); else audio.play(); } else { audio.pause(); }
+};
+$('#next').onclick=()=>step(1); $('#prev').onclick=()=>step(-1);
+if('mediaSession' in navigator){
+  const m=navigator.mediaSession;
+  m.setActionHandler('play',()=>audio.play());
+  m.setActionHandler('pause',()=>audio.pause());
+  m.setActionHandler('nexttrack',()=>step(1));
+  m.setActionHandler('previoustrack',()=>step(-1));
+}
+if(cur){$('#bnm').textContent=cur.name;$('#bsub').textContent='Tocca ▶';$('#blogo').style.backgroundImage=cur.logo?`url('${cur.logo}')`:''}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+load();
+</script>
+</body>
+</html>

@@ -85,7 +85,14 @@ html.hc .chip,html.hc .tab{border:2px solid var(--tx)}
     <label><span>Bassi</span><input type="range" class="bd" data-i="0" min="-12" max="12" step="1"></label>
     <label><span>Medi</span><input type="range" class="bd" data-i="1" min="-12" max="12" step="1"></label>
     <label><span>Alti</span><input type="range" class="bd" data-i="2" min="-12" max="12" step="1"></label>
-    <button id="rst">Azzera</button>
+    <div id="pre" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">
+      <button data-b="0,5,3">🗣 Voce</button>
+      <button data-b="-2,4,9">🦻 Chiarezza</button>
+      <button data-b="8,0,-2">🔊 Bassi</button>
+      <button data-b="-2,0,8">✨ Brillante</button>
+      <button data-b="5,0,5">🎵 Musica</button>
+      <button id="rst">↺ Azzera</button>
+    </div>
     <div id="eqmsg"></div>
     <div class="t" style="margin-top:10px;font-weight:600">⏲ Timer di spegnimento</div>
     <label><select id="slp" style="flex:1"><option value="0">Spento</option><option value="15">15 minuti</option><option value="30">30 minuti</option><option value="60">60 minuti</option><option value="90">90 minuti</option></select></label>
@@ -152,7 +159,7 @@ $('#th').onclick=()=>$('#sw').classList.toggle('show');
 $('#sw').onclick=e=>{const s=e.target.closest('.sw');if(s)applyTheme(s.dataset.k)};
 applyTheme(ls.get('theme','scuro'));
 let favs=ls.get('favs',[]), tab='all', tag='', list=[], cur=ls.get('last',null), timer;
-const VER='v2.2 · 19/11/2026';
+const VER='v2.3 · 19/11/2026';
 let reorder=false, recent=ls.get('recent',[]), want=false, retry=0, rt=null, stt=null, sleepEnd=0, sleepI=null;
 function all(){return [...list,...favs,...recent]}
 const NP='https://noisy-voice-02cb.tbrb2rhtnv.workers.dev/'; let npTitle='', npT=null;
@@ -315,7 +322,10 @@ if(cur){$('#bnm').textContent=cur.name;$('#bsub').textContent='Tocca ▶';$('#bl
     if(ctx&&ctx.state==='suspended')ctx.resume();
     syncVol();const was=cur&&!audio.paused;mk();if(cur&&was)play(cur);
   };
-  $('#rst').onclick=()=>{bands=[0,0,0];ls.set('bands',bands);document.querySelectorAll('.bd').forEach(r=>r.value=0);filt.forEach(f=>f.gain.value=0)};
+  const setBands=a=>{bands=a;ls.set('bands',bands);document.querySelectorAll('.bd').forEach(r=>r.value=bands[+r.dataset.i]);filt.forEach((f,i)=>f.gain.value=bands[i]);
+    if(!eqOn)$('#eqmsg').textContent="Attiva l'equalizzatore per sentire l'effetto"};
+  $('#rst').onclick=()=>setBands([0,0,0]);
+  document.querySelectorAll('#pre [data-b]').forEach(b=>b.onclick=()=>setBands(b.dataset.b.split(',').map(Number)));
 })();
 $('#ver').textContent=VER;
 function endSleep(){sleepEnd=0;clearInterval(sleepI);want=false;audio.pause();$('#slmsg').textContent='Timer terminato: radio fermata';$('#slp').value='0'}

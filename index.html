@@ -111,7 +111,7 @@ $('#th').onclick=()=>$('#sw').classList.toggle('show');
 $('#sw').onclick=e=>{const s=e.target.closest('.sw');if(s)applyTheme(s.dataset.k)};
 applyTheme(ls.get('theme','scuro'));
 let favs=ls.get('favs',[]), tab='all', tag='', list=[], cur=ls.get('last',null), timer;
-const VER='v1.5 · 18/11/2026';
+const VER='v1.6 · 19/11/2026';
 const NP='https://noisy-voice-02cb.tbrb2rhtnv.workers.dev/'; let npTitle='', npT=null;
 let audio, ctx, gain=null, filt=[];
 let eqOn=ls.get('eq',false), vol=ls.get('vol',1), bands=ls.get('bands',[0,0,0]);
@@ -207,7 +207,7 @@ function nowPlaying(){
   go(); npT=setInterval(go,20000);
 }
 function bind(){
-audio.onplaying=()=>{$('#pp').textContent='⏸';$('#bsub').textContent=npTitle?'♪ '+npTitle:'In onda';navigator.mediaSession&&(navigator.mediaSession.playbackState='playing')};
+audio.onplaying=()=>{if(eqOn&&gain)$('#eqmsg').textContent='Equalizzatore attivo su questa stazione';$('#pp').textContent='⏸';$('#bsub').textContent=npTitle?'♪ '+npTitle:'In onda';navigator.mediaSession&&(navigator.mediaSession.playbackState='playing')};
 audio.onpause=()=>{$('#pp').textContent='▶';if($('#bsub').textContent==='In onda'||$('#bsub').textContent[0]==='♪')$('#bsub').textContent='In pausa';navigator.mediaSession&&(navigator.mediaSession.playbackState='paused')};
 audio.onwaiting=()=>{$('#bsub').textContent='Buffering…'};
 audio.onerror=()=>{

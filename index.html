@@ -111,7 +111,7 @@ $('#th').onclick=()=>$('#sw').classList.toggle('show');
 $('#sw').onclick=e=>{const s=e.target.closest('.sw');if(s)applyTheme(s.dataset.k)};
 applyTheme(ls.get('theme','scuro'));
 let favs=ls.get('favs',[]), tab='all', tag='', list=[], cur=ls.get('last',null), timer;
-const VER='v1.6 · 19/11/2026';
+const VER='v1.7 · 19/11/2026';
 const NP='https://noisy-voice-02cb.tbrb2rhtnv.workers.dev/'; let npTitle='', npT=null;
 let audio, ctx, gain=null, filt=[];
 let eqOn=ls.get('eq',false), vol=ls.get('vol',1), bands=ls.get('bands',[0,0,0]);
@@ -211,7 +211,7 @@ audio.onplaying=()=>{if(eqOn&&gain)$('#eqmsg').textContent='Equalizzatore attivo
 audio.onpause=()=>{$('#pp').textContent='▶';if($('#bsub').textContent==='In onda'||$('#bsub').textContent[0]==='♪')$('#bsub').textContent='In pausa';navigator.mediaSession&&(navigator.mediaSession.playbackState='paused')};
 audio.onwaiting=()=>{$('#bsub').textContent='Buffering…'};
 audio.onerror=()=>{
-  if(eqOn&&cur){eqOn=false;ls.set('eq',false);$('#eq').checked=false;$('#eqmsg').textContent="Questa stazione non supporta l'equalizzatore: disattivato";mk();play(cur);return}
+  if(eqOn&&cur){eqOn=false;ls.set('eq',false);$('#eq').checked=false;window.syncVol&&syncVol();$('#eqmsg').textContent="Questa stazione non supporta l'equalizzatore: disattivato";mk();play(cur);return}
   $('#pp').textContent='▶';$('#bsub').textContent='Stazione non raggiungibile'};
 }
 $('#pp').onclick=()=>{
@@ -229,14 +229,15 @@ if('mediaSession' in navigator){
 if(cur){$('#bnm').textContent=cur.name;$('#bsub').textContent='Tocca ▶';$('#blogo').style.backgroundImage=cur.logo?`url('${cur.logo}')`:''}
 (function(){
   const a=new Audio();a.volume=.5;const volOK=a.volume===.5;
-  $('#vol').value=vol; $('#eq').checked=eqOn;
+  window.syncVol=()=>{$('#vol').disabled=!volOK&&!eqOn;$('#vol').style.opacity=$('#vol').disabled?.4:1};
+  $('#vol').value=vol; $('#eq').checked=eqOn; syncVol();
   document.querySelectorAll('.bd').forEach(r=>{r.value=bands[+r.dataset.i];r.oninput=()=>{const i=+r.dataset.i;bands[i]=+r.value;ls.set('bands',bands);if(filt[i])filt[i].gain.value=bands[i]}});
   $('#vol').oninput=e=>{vol=+e.target.value;ls.set('vol',vol);applyVol()};
-  $('#mxb').onclick=()=>{$('#mx').classList.toggle('show');if(!volOK&&!eqOn)$('#eqmsg').textContent="Su iPhone il volume si regola con i tasti del telefono; con l'equalizzatore attivo funziona anche il cursore."};
+  $('#mxb').onclick=()=>{$('#mx').classList.toggle('show');if(!volOK&&!eqOn)$('#eqmsg').textContent="Su iPhone il cursore del volume funziona solo con l'equalizzatore attivo; altrimenti usa i tasti del telefono."};
   $('#eq').onchange=e=>{
     eqOn=e.target.checked;ls.set('eq',eqOn);$('#eqmsg').textContent='';
     if(ctx&&ctx.state==='suspended')ctx.resume();
-    const was=cur&&!audio.paused;mk();if(cur&&was)play(cur);
+    syncVol();const was=cur&&!audio.paused;mk();if(cur&&was)play(cur);
   };
   $('#rst').onclick=()=>{bands=[0,0,0];ls.set('bands',bands);document.querySelectorAll('.bd').forEach(r=>r.value=0);filt.forEach(f=>f.gain.value=0)};
 })();

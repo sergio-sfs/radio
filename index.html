@@ -54,6 +54,22 @@ select{padding:10px;border-radius:10px;border:1px solid var(--bd);background:var
 #sw.show{display:flex}
 .sw{flex:none;width:38px;height:38px;border-radius:50%;border:3px solid var(--bd)}
 .sw.on{border-color:var(--ac)}
+.tab{font-size:14px}
+.tab.sm{flex:0 0 48px}
+.in{padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font-size:16px}
+#more{position:absolute;right:14px;top:-15px;width:46px;height:26px;border-radius:13px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);font-size:16px;line-height:1;padding:0}
+#sheet{display:none;position:fixed;right:12px;bottom:calc(88px + env(safe-area-inset-bottom));background:var(--sf);border:1px solid var(--bd);border-radius:12px;z-index:9;min-width:230px;overflow:hidden}
+#sheet.show{display:block}
+#sheet a,#sheet button{display:block;width:100%;padding:13px 14px;color:var(--tx);background:none;border:0;border-bottom:1px solid var(--bd);text-align:left;font-size:16px;text-decoration:none}
+html.big .nm{font-size:20px}
+html.big .sub{font-size:16px}
+html.big .chip,html.big .tab{font-size:17px}
+html.big .st{padding:14px}
+html.big .logo{width:52px;height:52px}
+html.big #mx label,html.big #mx details,html.big #mx select{font-size:17px}
+html.hc .sub,html.hc #mx label span,html.hc #eqmsg,html.hc #slmsg,html.hc #ver{color:var(--tx)!important}
+html.hc .st{border-bottom:2px solid var(--tx)}
+html.hc .chip,html.hc .tab{border:2px solid var(--tx)}
 </style>
 </head>
 <body>
@@ -68,6 +84,14 @@ select{padding:10px;border-radius:10px;border:1px solid var(--bd);background:var
     <label><span>Alti</span><input type="range" class="bd" data-i="2" min="-12" max="12" step="1"></label>
     <button id="rst">Azzera</button>
     <div id="eqmsg"></div>
+    <div class="t" style="margin-top:10px;font-weight:600">⏲ Timer di spegnimento</div>
+    <label><select id="slp" style="flex:1"><option value="0">Spento</option><option value="15">15 minuti</option><option value="30">30 minuti</option><option value="60">60 minuti</option><option value="90">90 minuti</option></select></label>
+    <div id="slmsg" style="font-size:12px;color:var(--mu)"></div>
+    <label class="t"><input type="checkbox" id="big"> Testo grande</label>
+    <label class="t"><input type="checkbox" id="hc"> Alto contrasto</label>
+    <details style="margin-top:6px;font-size:14px"><summary style="font-weight:600">＋ Aggiungi una stazione</summary>
+      <div style="margin-top:6px"><input type="text" id="cn" placeholder="Nome" class="in" style="width:100%;margin-bottom:6px"><input type="url" id="cu" placeholder="https://… indirizzo dello stream" class="in" style="width:100%;margin-bottom:6px"><button id="ca">Aggiungi ai preferiti</button><div id="cmsg" style="font-size:12px;color:var(--mu);margin-top:4px"></div></div>
+    </details>
     <details style="margin-top:10px;font-size:14px"><summary style="font-weight:600">🦻 Aiuto udito (impostazioni del telefono)</summary>
       <div style="margin-top:6px;color:var(--mu);line-height:1.5">
         <b style="color:var(--tx)">iPhone</b><br>
@@ -84,12 +108,14 @@ select{padding:10px;border-radius:10px;border:1px solid var(--bd);background:var
     <input type="search" id="q" placeholder="Cerca stazione…">
     <select id="cc"><option value="IT">🇮🇹 Italia</option><option value="">🌍 Mondo</option><option value="CH">🇨🇭 Svizzera</option><option value="GB">🇬🇧 UK</option><option value="US">🇺🇸 USA</option></select>
   </div>
-  <div class="tabs"><div class="tab on" id="t-all">Stazioni</div><div class="tab" id="t-fav">★ Preferiti</div></div>
+  <div class="tabs"><div class="tab on" id="t-all">Stazioni</div><div class="tab" id="t-fav">★ Preferiti</div><div class="tab" id="t-rec">🕘 Recenti</div><div class="tab sm" id="t-rnd">🎲</div></div>
   <div class="chips" id="chips"></div>
 </header>
 <div id="list"></div>
 <div id="msg"></div>
+<div id="sheet"></div>
 <div id="bar">
+  <button id="more">⋯</button>
   <div class="logo" id="blogo">📻</div>
   <div class="info"><div class="nm" id="bnm">Scegli una stazione</div><div class="sub" id="bsub">&nbsp;</div></div>
   <button class="ctl s" id="prev">⏮</button>
@@ -122,7 +148,9 @@ $('#th').onclick=()=>$('#sw').classList.toggle('show');
 $('#sw').onclick=e=>{const s=e.target.closest('.sw');if(s)applyTheme(s.dataset.k)};
 applyTheme(ls.get('theme','scuro'));
 let favs=ls.get('favs',[]), tab='all', tag='', list=[], cur=ls.get('last',null), timer;
-const VER='v1.9 · 19/11/2026';
+const VER='v2.0 · 19/11/2026';
+let recent=ls.get('recent',[]), want=false, retry=0, rt=null, stt=null, sleepEnd=0, sleepI=null;
+function all(){return [...list,...favs,...recent]}
 const NP='https://noisy-voice-02cb.tbrb2rhtnv.workers.dev/'; let npTitle='', npT=null;
 let audio, ctx, gain=null, filt=[], an=null;
 let eqOn=ls.get('eq',false), vol=ls.get('vol',1), bands=ls.get('bands',[0,0,0]);
@@ -148,9 +176,11 @@ mk();
 function build(){ $('#chips').innerHTML=GENRES.map(([v,l])=>`<div class="chip${v===tag?' on':''}" data-t="${v}">${l}</div>`).join(''); }
 build();
 $('#chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;tag=c.dataset.t;build();tab='all';setTab();load()};
-function setTab(){$('#t-all').classList.toggle('on',tab==='all');$('#t-fav').classList.toggle('on',tab==='fav');render()}
+function setTab(){$('#t-all').classList.toggle('on',tab==='all');$('#t-fav').classList.toggle('on',tab==='fav');$('#t-rec').classList.toggle('on',tab==='rec');render()}
 $('#t-all').onclick=()=>{tab='all';setTab()};
 $('#t-fav').onclick=()=>{tab='fav';setTab()};
+$('#t-rec').onclick=()=>{tab='rec';setTab()};
+$('#t-rnd').onclick=()=>{const p=list.filter(x=>!cur||x.id!==cur.id);if(!p.length)return;tab='all';setTab();play(p[Math.floor(Math.random()*p.length)])};
 $('#q').oninput=()=>{clearTimeout(timer);timer=setTimeout(load,400)};
 $('#cc').onchange=load;
 
@@ -174,25 +204,26 @@ async function load(){
   render();
 }
 function render(){
-  const src=tab==='fav'?favs:list;
+  const src=tab==='fav'?favs:tab==='rec'?recent:list;
   $('#list').innerHTML=src.map(s=>`<div class="st${cur&&cur.id===s.id?' cur':''}" data-id="${s.id}">
     <div class="logo" style="${s.logo?`background-image:url('${s.logo}')`:''}">${s.logo?'':'📻'}</div>
     <div class="info"><div class="nm">${esc(s.name)}</div><div class="sub">${esc(s.tags||'')}</div></div>
     <button class="fav${favs.some(f=>f.id===s.id)?' on':''}" data-f="${s.id}">★</button></div>`).join('');
-  $('#msg').textContent=src.length?'':(tab==='fav'?'Nessun preferito: tocca ★ su una stazione':($('#msg').textContent==='Carico…'?'Carico…':'Nessuna stazione trovata'));
-  if(src.length&&$('#msg').textContent!=='')$('#msg').textContent=$('#msg').textContent.startsWith('Offline')?$('#msg').textContent:'';
+  const m0=$('#msg').textContent;
+  $('#msg').textContent=src.length?(m0.startsWith('Offline')?m0:''):(tab==='fav'?'Nessun preferito: tocca ★ su una stazione':tab==='rec'?'Nessuna stazione ascoltata finora':(m0==='Carico…'?m0:'Nessuna stazione trovata'));
 }
 function esc(t){return t.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 $('#list').onclick=e=>{
   const f=e.target.closest('[data-f]');
-  if(f){const id=f.dataset.f;const s=[...list,...favs].find(x=>x.id===id);
+  if(f){const id=f.dataset.f;const s=all().find(x=>x.id===id);
     favs=favs.some(x=>x.id===id)?favs.filter(x=>x.id!==id):[...favs,s];ls.set('favs',favs);render();return}
   const r=e.target.closest('.st'); if(!r)return;
-  const s=[...list,...favs].find(x=>x.id===r.dataset.id); if(s)play(s);
+  const s=all().find(x=>x.id===r.dataset.id); if(s)play(s);
 };
-function pool(){return tab==='fav'?favs:list}
-function play(s){
-  cur=s; ls.set('last',s);
+function pool(){return tab==='fav'?favs:tab==='rec'?recent:list}
+function play(s,isRetry){
+  cur=s; ls.set('last',s); want=true;
+  if(!isRetry){retry=0;recent=[s,...recent.filter(x=>x.id!==s.id)].slice(0,15);ls.set('recent',recent)}
   if(ctx&&ctx.state==='suspended')ctx.resume();
   npTitle='';nowPlaying();
   audio.src=s.url; $('#bnm').textContent=s.name; $('#bsub').textContent='Connessione…';
@@ -218,9 +249,11 @@ function nowPlaying(){
   };
   go(); npT=setInterval(go,20000);
 }
+function reconnect(){if(!want||!cur||retry>=6)return;retry++;$('#bsub').textContent='Riconnessione… ('+retry+')';clearTimeout(rt);rt=setTimeout(()=>{if(want&&cur)play(cur,true)},Math.min(2000*retry,10000))}
 function noEq(msg){eqOn=false;ls.set('eq',false);$('#eq').checked=false;window.syncVol&&syncVol();mk();$('#eqmsg').textContent=msg;if(cur)play(cur)}
 function bind(){
 audio.onplaying=()=>{
+  retry=0;clearTimeout(stt);clearTimeout(rt);
   if(eqOn&&gain&&an){const a=audio;$('#eqmsg').textContent='Verifica equalizzatore…';
     setTimeout(()=>{ if(a!==audio||!eqOn||a.paused||!an)return;
       if(ctx&&ctx.state==='suspended')ctx.resume();
@@ -230,20 +263,23 @@ audio.onplaying=()=>{
     },4000);}
 $('#pp').textContent='⏸';$('#bsub').textContent=npTitle?'♪ '+npTitle:'In onda';navigator.mediaSession&&(navigator.mediaSession.playbackState='playing')};
 audio.onpause=()=>{$('#pp').textContent='▶';if($('#bsub').textContent==='In onda'||$('#bsub').textContent[0]==='♪')$('#bsub').textContent='In pausa';navigator.mediaSession&&(navigator.mediaSession.playbackState='paused')};
-audio.onwaiting=()=>{$('#bsub').textContent='Buffering…'};
+audio.onwaiting=()=>{$('#bsub').textContent='Buffering…';clearTimeout(stt);stt=setTimeout(()=>{if(want&&audio.readyState<3)reconnect()},15000)};
+audio.onended=()=>{if(want)reconnect()};
+audio.ontimeupdate=()=>{if(sleepEnd&&Date.now()>=sleepEnd)endSleep()};
 audio.onerror=()=>{
   if(eqOn&&cur){noEq("Questa stazione non supporta l'equalizzatore: disattivato");return}
-  $('#pp').textContent='▶';$('#bsub').textContent='Stazione non raggiungibile'};
+  $('#pp').textContent='▶';
+  if(want&&retry<6)reconnect();else $('#bsub').textContent='Stazione non raggiungibile'};
 }
 $('#pp').onclick=()=>{
   if(!cur){const p=pool();if(p.length)play(p[0]);return}
-  if(audio.paused){ if(!audio.src||audio.error)play(cur); else audio.play(); } else { audio.pause(); }
+  if(audio.paused){ want=true; if(!audio.src||audio.error)play(cur); else audio.play(); } else { want=false; audio.pause(); }
 };
 $('#next').onclick=()=>step(1); $('#prev').onclick=()=>step(-1);
 if('mediaSession' in navigator){
   const m=navigator.mediaSession;
-  m.setActionHandler('play',()=>audio.play());
-  m.setActionHandler('pause',()=>audio.pause());
+  m.setActionHandler('play',()=>{want=true;audio.play()});
+  m.setActionHandler('pause',()=>{want=false;audio.pause()});
   m.setActionHandler('nexttrack',()=>step(1));
   m.setActionHandler('previoustrack',()=>step(-1));
 }
@@ -263,6 +299,40 @@ if(cur){$('#bnm').textContent=cur.name;$('#bsub').textContent='Tocca ▶';$('#bl
   $('#rst').onclick=()=>{bands=[0,0,0];ls.set('bands',bands);document.querySelectorAll('.bd').forEach(r=>r.value=0);filt.forEach(f=>f.gain.value=0)};
 })();
 $('#ver').textContent=VER;
+function endSleep(){sleepEnd=0;clearInterval(sleepI);want=false;audio.pause();$('#slmsg').textContent='Timer terminato: radio fermata';$('#slp').value='0'}
+function setSleep(m){clearInterval(sleepI);sleepEnd=m?Date.now()+m*60000:0;
+  const upd=()=>{if(!sleepEnd)return;if(Date.now()>=sleepEnd){endSleep();return}$('#slmsg').textContent='Si ferma tra '+Math.ceil((sleepEnd-Date.now())/60000)+' min'};
+  if(m){upd();sleepI=setInterval(upd,15000)}else $('#slmsg').textContent=''}
+$('#slp').onchange=e=>setSleep(+e.target.value);
+function applyAcc(){document.documentElement.classList.toggle('big',!!ls.get('big',false));document.documentElement.classList.toggle('hc',!!ls.get('hc',false))}
+$('#big').checked=!!ls.get('big',false);$('#hc').checked=!!ls.get('hc',false);applyAcc();
+$('#big').onchange=e=>{ls.set('big',e.target.checked);applyAcc()};
+$('#hc').onchange=e=>{ls.set('hc',e.target.checked);applyAcc()};
+$('#ca').onclick=()=>{
+  const n=$('#cn').value.trim(),u=$('#cu').value.trim(),m=$('#cmsg');
+  if(/^http:\/\//i.test(u)){m.textContent='Servono indirizzi https: quelli http sono bloccati dal browser';return}
+  if(!n||!/^https:\/\//i.test(u)){m.textContent='Inserisci nome e indirizzo https';return}
+  favs=[...favs,{id:'c'+Date.now(),name:n,url:u,logo:'',tags:'la mia stazione'}];ls.set('favs',favs);
+  $('#cn').value='';$('#cu').value='';m.textContent='Aggiunta ai preferiti';render();
+};
+$('#more').onclick=()=>{
+  const sh=$('#sheet');
+  if(sh.classList.contains('show')){sh.classList.remove('show');return}
+  if(!cur){sh.innerHTML='<div style="padding:13px 14px;color:var(--mu)">Scegli prima una stazione</div>'}
+  else{
+    let x='';
+    if(npTitle){const q=encodeURIComponent(npTitle);
+      x+=`<a target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${q}">▶ Cerca il brano su YouTube</a><a target="_blank" rel="noopener" href="https://open.spotify.com/search/${q}">🎧 Cerca il brano su Spotify</a>`}
+    x+='<button id="shr">↗ Condividi stazione</button>';
+    sh.innerHTML=x;
+    $('#shr').onclick=async()=>{
+      const t=cur.name+' – ascoltala qui: '+cur.url;
+      try{if(navigator.share)await navigator.share({title:cur.name,text:t});else{await navigator.clipboard.writeText(t);$('#bsub').textContent='Link copiato'}}catch(e){}
+      sh.classList.remove('show')};
+  }
+  sh.classList.add('show');
+};
+document.addEventListener('click',e=>{if(!e.target.closest('#sheet,#more'))$('#sheet').classList.remove('show')});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 load();
 </script>
